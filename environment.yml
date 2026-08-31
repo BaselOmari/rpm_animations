@@ -1,0 +1,22 @@
+# Recreate the env with:
+#   mamba env create -p ./.venv -f environment.yml
+# (or `conda env create ...`). Homebrew is locked down on Meta laptops and
+# pycairo has no macOS wheel, so conda-forge is the working install path.
+name: animation
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - manim
+  - ffmpeg
+  - matplotlib
+  - pypdf
+  - ipykernel
+  - nbformat
+  - nbclient
+  - pip
+  - pip:
+      - mpltex==0.7
+# LaTeX (for Tex/MathTex) is NOT installed here: conda-forge's texlive-core
+# ships an empty texmf tree, no dvisvgm, and a broken tlmgr. Use BasicTeX
+# instead -- see README.md.
