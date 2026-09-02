@@ -1,16 +1,15 @@
 # Making Manim animations
 
 [Manim](https://www.manim.community/) is a Python library for programmatic
-animation, written by Grant Sanderson (**3Blue1Brown**) for his math videos and
-now maintained as Manim Community Edition.
+animation, written by Grant Sanderson ([**3Blue1Brown**](https://www.youtube.com/@3blue1brown)) for his math videos.
 
-This repo is a worked example — two short clips explaining **AI Research
-Preference Models** — but what follows is the method, not the paper.
+This repo is a worked example including two short clips explaining **AI Research
+Preference Models**.
 
 ## 1. Let a coding agent write the first draft
 
 Point **Claude Code**, **Codex**, or **Muse Code** at an empty repo and describe
-the animation you want. Don't start from a blank file.
+the animation you want.
 
 The first demo is a start, not a finish. You'll have something moving in
 minutes, and it will be approximately right and subtly wrong — overlapping text,
@@ -100,9 +99,7 @@ once when it's right.
 
 ## Setup
 
-Manim needs cairo, pango, and ffmpeg. On a locked-down machine `pip install
-manim` fails — `pycairo` has no macOS wheel and can't build without a writable
-Homebrew. Use conda-forge, which ships them prebuilt:
+Manim needs cairo, pango, and ffmpeg. Use conda-forge, which ships them prebuilt:
 
 ```bash
 mamba env create -p ./.venv -f environment.yml
@@ -115,8 +112,7 @@ You get Manim Community 0.20.1, ffmpeg, and Python 3.12 in `./.venv`.
 Only needed for `Tex` / `MathTex`. The scenes here use Pango `Text` only, so
 they render without it.
 
-Avoid conda-forge's `texlive-core` — empty texmf tree, no `dvisvgm`, broken
-`tlmgr`. Use BasicTeX:
+Use BasicTeX:
 
 ```bash
 brew install --cask basictex
@@ -174,26 +170,3 @@ candidate rail are literally the same objects across the two clips.
 ```
 
 Output lands in `media/videos/<file>/<resolution>/<Scene>.mp4`.
-
-Flags worth knowing: `-p` opens the result, `-s` renders the last frame as a
-PNG, and `--disable_caching` forces a full re-render — **required after editing
-`components/`**, since Manim only hashes the scene file and will otherwise serve
-a stale render.
-
-## Gotchas
-
-- Manim **hoists any submobject you animate to the top of the draw order**,
-  permanently. Animating `box.panel` leaves the panel over its own label.
-  Animate the whole group, or re-`add()` the parent afterwards.
-- `set_opacity()` sets fill *and* stroke absolutely. On a curve with
-  `fill_opacity=0` it fills between the curve and its chord — invisible on
-  white, an obvious grey wedge on black. Scale existing opacities instead; see
-  `dimmed()` in `components/anims.py`.
-- `CubicBezier` isn't a `TipableVMobject`, so `.add_tip()` doesn't exist. Place
-  the head by hand — see `curved_arrow()` in `components/rpm.py`.
-- Fonts fail silently. If the type looks generic, the name didn't resolve.
-
-## History
-
-The full exploratory history — figure recreations, alternate Video 2 variants,
-scratch scenes, and a render shortcut — lives on the `dev` branch.
