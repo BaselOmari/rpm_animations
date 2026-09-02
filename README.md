@@ -1,128 +1,143 @@
-# RPM animations
+# Making Manim animations
 
-Two short Manim clips for a Twitter/X thread on **AI Research Preference Models**
-(Foster, Al Omari, Fu et al.). Both are animated readings of Figure 1 and
-Sections 2.2 / 3 / 3.1 / 3.2 / 3.3.
+[Manim](https://www.manim.community/) is a Python library for programmatic
+animation, originally written by Grant Sanderson (**3Blue1Brown**) to make his
+math videos and now maintained by the community as Manim Community Edition.
 
-| Scene | File | Length | Question it answers |
-|---|---|---|---|
-| `Video1WhyRPM` | `scenes/video1.py` | ~37 s | Why do we need an RPM? |
-| `Video2HowRPM` | `scenes/video2.py` | ~28 s | How does the RPM decide? |
+This repo is a worked example — two short clips explaining **AI Research
+Preference Models** — but the point of this README is the method, not the paper.
+Here's how to make your own.
 
-Video 2 follows by opening the black-box preference decision introduced in
-Video 1 and comparing two ways an RPM can make that choice.
+## 1. Let a coding agent write the first draft
 
-## Rendering
+Don't hand-write Manim from a blank file. Point **Claude Code**, **Codex**, or
+**Muse Code** at an empty repo and describe the animation you want.
 
-```bash
-# low-quality previews (480p15) — fast iteration
-.venv/bin/manim render -ql scenes/video1.py Video1WhyRPM
-.venv/bin/manim render -ql scenes/video2.py Video2HowRPM
+The catch: **the first demo is a start, not a finish.** You'll get something
+moving on screen in a few minutes, and it will look approximately right and
+subtly wrong — text overlapping, arrows landing in the wrong place, beats that
+run too fast to read. That's normal. Perfecting the animations in this repo took
+a full weekend of iteration. Budget for that. The agent gets you to 70% fast,
+and the last 30% is you watching a render, describing exactly what's off, and
+re-rendering.
 
-# individual Video 1 acts
-.venv/bin/manim render -ql scenes/video1_act1.py Video1Act1
-.venv/bin/manim render -ql scenes/video1_act2.py Video1Act2
-.venv/bin/manim render -ql scenes/video1_act3.py Video1Act3
+Work in small loops: render at low quality, watch it, fix one thing, repeat.
 
-# final 1080p60 — what to post
-.venv/bin/manim render -qh scenes/video1.py Video1WhyRPM
-.venv/bin/manim render -qh scenes/video2.py Video2HowRPM
+## 2. Give the agent your project background
 
-# 4K, if you want headroom for cropping
-.venv/bin/manim render -qk scenes/video1.py Video1WhyRPM
+An agent that doesn't know your subject will invent plausible nonsense. Put the
+source material in the repo and tell the agent to read it.
+
+This repo keeps it in `project_background/`:
+
+```
+project_background/
+  RPM v2.pdf              the paper the animation explains
+  RPM.png                 Figure 1 — the diagram being animated
+  sample_meta_images/     reference decks for visual style
 ```
 
-Useful flags: `-p` opens the result, `-s` renders only the last frame as a PNG,
-`--disable_caching` forces a full re-render (needed after editing `components/`,
-since Manim only hashes the scene file).
+The paper gives the agent the *content* — what the terms mean, what the figure
+is claiming, which detail matters. The figure gives it the *structure* to animate.
+Without these you will spend your iteration budget correcting facts instead of
+polishing motion.
 
-Output lands in `media/videos/<file>/<resolution>/<Scene>.mp4`.
+## 3. Give it visual references too
 
-## Structure
+`project_background/sample_meta_images/` holds screenshots of existing branded
+decks and figures. Drop in a few images of the look you're targeting and the
+agent will sample colors and layout conventions from them instead of defaulting
+to Manim's stock blue-on-white.
+
+### Meta styling
+
+If you want the Meta house look, the recipe is: **pure black ground, Meta blue as
+the single loud accent, everything else greyscale.**
+
+Fonts — installed system-wide in `/Library/Fonts`:
+
+| Font | Use |
+|---|---|
+| `Optimistic` | Meta's brand face; body text, labels, captions |
+| `Facebook Sans App` | section titles and headers |
+
+Pango silently falls back to a default face if the font isn't installed, and the
+type quietly goes off-brand — check your first render for this.
+
+Core colors:
+
+| Role | Hex |
+|---|---|
+| Ground | `#000000` |
+| Primary text | `#FFFFFF` |
+| Secondary text | `#A7B3BF` |
+| Tertiary text / faint arrows | `#67788A` |
+| Hairlines, dividers | `#32383E` |
+| **Meta blue (primary)** | `#0064E0` |
+| **Meta blue (light accent)** | `#47A5FA` |
+| Meta blue (deep) | `#003270` |
+| Peach callout | `#FABE82` |
+| Panel fill | `#0E1114` |
+| Inset fill | `#171C21` |
+
+The blues carry all the emphasis. Everything that isn't the thing you want
+looked at should be grey.
+
+**Put all of this in one file.** This repo uses `components/theme.py` — palette,
+type sizes, and timing constants in a single module that every scene imports.
+Changing the look becomes a one-file edit instead of a find-and-replace across
+every scene.
+
+## 4. Split long videos into act files
+
+A four-minute animation in one file is miserable to iterate on: every tweak to
+the ending means re-rendering the beginning.
+
+Split it. Each act is its own file with its own independently renderable scene,
+plus a thin orchestrator that plays them back to back:
 
 ```
 scenes/
-  video1.py              combined Video 1 orchestrator
-  video1_common.py       shared Video 1 components and pacing
-  video1_act1.py         compute-allocation problem
-  video1_act2.py         RPM solution
-  video1_act3.py         research-agent integration
-  video2.py              "How does the RPM decide?" — split-screen comparison
-components/
-  theme.py               palette, type, timing  ← change the look here
-  base.py                RPMScene / RPMMovingScene (black ground)
-  node.py                SolutionNode + the four Figure 1 states
-  tree.py                SearchTree, edges, Figure 1 layout, retarget_tree
-  candidate.py           CandidateCard (plan + code), candidate rails
-  candidate_diagrams.py  small architecture icons drawn on candidate cards
-  rpm.py                 RPMBox, funnel/fan/curved arrows, tournament ladder
-  gpu.py                 GPUBox (expensive), SandboxBox (cheap pilot), Clock
-  agent.py               AgentBox
-  labels.py              captions, step badges, Figure 1 stage strip, pills
-  anims.py               dimmed(), travel()
-project_background/      the paper, Figure 1, and Meta style references
+  video1_common.py    shared geometry, styling, pacing for all acts
+  video1_act1.py      Act 1  -> renders standalone as Video1Act1
+  video1_act2.py      Act 2  -> renders standalone as Video1Act2
+  video1_act3.py      Act 3  -> renders standalone as Video1Act3
+  video1.py           orchestrator -> plays all three as Video1WhyRPM
 ```
 
-Both scenes are built from the same components, so the tree, the RPM box and the
-candidate rail are literally the same objects across the two videos.
+Each act exposes its timeline as a mixin, and the orchestrator inherits all
+three and calls them in order. Now you can iterate on Act 3 alone in seconds,
+then render the whole thing once when it's right. Anything shared between acts
+lives in `video1_common.py`.
 
-Video 2 is self-contained: `scenes/video2.py` holds the layout constants, the
-`PreferenceModel` container, the `SandboxExecutionCard` pilot runs, and the
-timing that lets the agentic pilots keep running after the inference-only side
-has already committed to its pick.
+## 5. Use the Manim Sideview extension in VS Code
 
-## Visual language
+Install [**Manim Sideview**](https://marketplace.visualstudio.com/items?itemName=Rickaym.manim-sideview).
+It renders the scene your cursor is in and plays the result in a panel beside
+your code, so you're not alt-tabbing to a video player after every change. This
+is the single biggest quality-of-life upgrade for the tight iteration loop that
+step 1 requires.
 
-Dark Meta house style: pure black ground, **Optimistic** type, Meta blue as the
-single loud accent. Colours are sampled from
-`project_background/sample_meta_images/`; the node *semantics* come from Figure 1
-of the paper.
+## Setup
 
-| Element | Meaning | Colour |
-|---|---|---|
-| Green circle with a score | executed solution, has a validation score | `#0D2A20` / `#3ED598` |
-| Red circle, no score | executed, buggy / failed | `#2C1418` / `#FA8282` |
-| Grey circle, letter label | candidate mutation, **not** executed | `#14181C` / `#67788A` |
-| Blue circle | the candidate the RPM selected | `#0064E0` / `#47A5FA` |
-| Warm plate behind a node | parent currently being mutated | `#FABE82` |
-| White arrow | tree edge (a mutation) | `#FFFFFF` |
-| Blue arrow | RPM-selected flow | `#47A5FA` |
-| Peach | compute cost / GPU time | `#FABE82` |
-
-Everything routes through `components/theme.py` — swapping the palette or the
-typeface is a one-file change.
-
-## What the videos say
-
-**Video 1.** Three distinct acts establish the compute-allocation problem,
-introduce an RPM as a black-box selector, and show where it plugs into the
-research-agent search loop. It stops after the RPM selects a child, before that
-child is executed or added back to the tree.
-
-**Video 2.** A fixed split-screen comparison contrasts an inference-only RPM,
-which reasons from existing evidence, with an agentic RPM, which first gathers
-evidence from small pilot experiments. The agentic pilots deliberately outlast
-the inference-only reasoning pass, so the left side resolves first and the extra
-cost of gathering fresh evidence is visible. It explains the decision mechanisms
-that Video 1 intentionally leaves inside the black box.
-
-Figure 1 selects candidate **A**. Video 1 uses **C**; Video 2 uses **C** for the
-inference-only side and **D** for the agentic side.
-
-## Environment
-
-The env lives in `./.venv` and was built with **micromamba + conda-forge**, not pip.
-Homebrew is not writable on this machine and `pycairo` has no macOS wheel, so
-`pip install manim` fails to build; conda-forge ships cairo/pango/ffmpeg prebuilt.
+Manim needs cairo, pango, and ffmpeg — all native libraries. On a locked-down
+machine (no writable Homebrew) `pip install manim` fails, because `pycairo` has
+no macOS wheel and tries to build from source. **Use conda-forge**, which ships
+them prebuilt:
 
 ```bash
 mamba env create -p ./.venv -f environment.yml
 ```
 
-Installed: Manim Community 0.20.1, ffmpeg 9.0.1, Python 3.12.
+That gives you Manim Community 0.20.1, ffmpeg, and Python 3.12 in `./.venv`.
 
-**LaTeX is not installed**, so these scenes use Pango `Text` only — no `Tex` or
-`MathTex` anywhere. Keep it that way unless you install BasicTeX:
+### LaTeX (optional)
+
+You only need LaTeX if you use `Tex` or `MathTex`. The scenes here deliberately
+don't — they use Pango `Text` only, so they render with no TeX installed.
+
+Don't install conda-forge's `texlive-core`: it ships an empty texmf tree, no
+`dvisvgm`, and a broken `tlmgr`. Use BasicTeX:
 
 ```bash
 brew install --cask basictex
@@ -133,29 +148,78 @@ sudo tlmgr install standalone preview doublestroke relsize fundus-calligra \
   mathastext cbfonts-fd
 ```
 
-**Optimistic** must be installed system-wide (it is, in `/Library/Fonts`). Without
-it Pango silently falls back and the type goes off-brand.
+## What's in this repo
 
-## Gotchas hit while building this
+```
+scenes/
+  video1.py              Video 1 orchestrator — "Why do we need an RPM?"
+  video1_common.py       shared geometry, styling, pacing for the acts
+  video1_act1.py         Act 1 — the compute-allocation problem
+  video1_act2.py         Act 2 — the RPM solution
+  video1_act3.py         Act 3 — research-agent integration
+  video2.py              Video 2 — "How does the RPM decide?"
+components/
+  theme.py               palette, type, timing  <- change the look here
+  base.py                RPMScene / RPMMovingScene (black ground)
+  node.py                the four node states from Figure 1
+  tree.py                SearchTree, edges, Figure 1 layout
+  candidate.py           CandidateCard (plan + code), candidate rails
+  candidate_diagrams.py  small architecture icons for candidate cards
+  rpm.py                 RPMBox, funnel/fan/curved arrows, tournament ladder
+  gpu.py                 GPUBox (expensive), SandboxBox (cheap pilot), Clock
+  agent.py               AgentBox
+  labels.py              captions, step badges, stage strips, pills
+  anims.py               dimmed(), travel()
+project_background/      the paper, Figure 1, and style references
+manim.cfg                project-wide render defaults
+```
 
-- Manim hoists any **submobject** you animate to the top of the scene's draw
-  order, permanently. Animating `box.panel` leaves the panel painted over its own
-  label. Animate the whole group, or re-`add()` the parent afterwards.
-- `Mobject.set_opacity()` sets fill *and* stroke opacity absolutely, so on a curve
-  drawn with `fill_opacity=0` it paints in the region between the curve and its
-  chord — invisible on white, a grey wedge on black. Use `dimmed()` from
-  `components/anims.py`, which scales existing opacities instead.
-- `CubicBezier` is not a `TipableVMobject`, so `.add_tip()` does not exist. Use
-  `curved_arrow()` in `components/rpm.py`, which places the head by hand.
-- PyPI needs `--cert /etc/ssl/cert.pem` here; the corp proxy's CA is not in
-  certifi's bundle. Don't `pip install` cairo/pango-backed packages into `.venv`;
-  use `mamba`.
+Both videos are built from the same `components/`, so the tree, the RPM box, and
+the candidate rail are literally the same objects across the two clips.
 
-`project_background/` is reference material — leave it as is.
+## Rendering
+
+```bash
+# low quality (480p15) — the iteration loop
+.venv/bin/manim render -ql scenes/video1.py Video1WhyRPM
+.venv/bin/manim render -ql scenes/video2.py Video2HowRPM
+
+# a single act, while you're working on it
+.venv/bin/manim render -ql scenes/video1_act1.py Video1Act1
+.venv/bin/manim render -ql scenes/video1_act2.py Video1Act2
+.venv/bin/manim render -ql scenes/video1_act3.py Video1Act3
+
+# final 1080p60 — what you post
+.venv/bin/manim render -qh scenes/video1.py Video1WhyRPM
+.venv/bin/manim render -qh scenes/video2.py Video2HowRPM
+```
+
+Output lands in `media/videos/<file>/<resolution>/<Scene>.mp4`.
+
+Useful flags:
+
+- `-p` — open the result when it finishes
+- `-s` — render only the last frame, as a PNG
+- `--disable_caching` — force a full re-render. **You need this after editing
+  anything in `components/`**, because Manim only hashes the scene file and will
+  happily serve you a stale cached render otherwise.
+
+## Gotchas worth knowing up front
+
+These cost real time to diagnose:
+
+- Manim **hoists any submobject you animate to the top of the draw order**,
+  permanently. Animating `box.panel` leaves the panel painted over its own label.
+  Animate the whole group, or re-`add()` the parent afterwards.
+- `Mobject.set_opacity()` sets fill *and* stroke opacity absolutely. On a curve
+  drawn with `fill_opacity=0` it fills the region between the curve and its
+  chord — invisible on white, an obvious grey wedge on black. Scale the existing
+  opacities instead; see `dimmed()` in `components/anims.py`.
+- `CubicBezier` is not a `TipableVMobject`, so `.add_tip()` doesn't exist. Place
+  the arrowhead by hand — see `curved_arrow()` in `components/rpm.py`.
+- Fonts fail silently. If the type looks generic, the font name didn't resolve.
 
 ## History
 
-The full exploratory history — the `graphs/` figure recreations, the alternate
-Video 2 variants (`video2_sandbox_cards.py`, `video2_sandbox_cards_slow.py`,
-`video2_training_curves.py`), the `main.py` render shortcut, and scratch scenes
-— lives on the `dev` branch.
+The full exploratory history — figure recreations, alternate Video 2 variants,
+scratch scenes, and a render shortcut script — lives on the `dev` branch.
