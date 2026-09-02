@@ -10,7 +10,7 @@ Preference Models**.
 <tr>
 <td width="50%" align="center">
 <video src="assets/Video1WhyRPM.mp4" controls muted loop width="100%"></video>
-<br><sub><b>Video 1</b> — Why do we need an RPM?</sub>
+<br><sub><b>Video 1</b> — RPM Motivation</sub>
 </td>
 <td width="50%" align="center">
 <video src="assets/Video2RPMVariants.mp4" controls muted loop width="100%"></video>
