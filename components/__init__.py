@@ -26,20 +26,6 @@ from .candidate_diagrams import (
     make_mlp_icon,
     make_tree_icon,
 )
-from .figure1 import (
-    CANDIDATE_LABELS,
-    GPU_SCALE,
-    RAIL_BOTTOM,
-    RAIL_R,
-    RAIL_TOP,
-    RAIL_X,
-    TREE_SCALE,
-    TREE_R_AT,
-    WINNER,
-    decision_frame,
-)
-from .figure1 import GPU_AT as GPU_DECIDE_AT
-from .figure1 import RPM_AT as RPM_DECIDE_AT
 from .gpu import Clock, GPUBox, ProgressBar, SandboxBox, make_gpu_box, make_sandbox_box
 from .labels import (
     BOTTOM_Y,

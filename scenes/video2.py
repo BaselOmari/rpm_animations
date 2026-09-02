@@ -2,9 +2,10 @@
 
 Both halves remain visible as fixed, downward pipelines:
 
-    four candidates -> preference model -> selected candidate
+    five candidates -> preference model -> selected candidate
 
-Animation is limited to local emphasis, pilot progress, and selection styling.
+The inference-only side reasons over existing evidence; the agentic side runs
+sandbox pilot experiments, which take deliberately longer to finish.
 
 Render:  .venv/bin/manim render -ql scenes/video2.py Video2HowRPM
 """
@@ -36,9 +37,30 @@ PREFERENCE_MODEL_TITLE_GAP = 0.07
 CANDIDATE_LABELS_V2 = ("A", "B", "C", "D", "E")
 INFERENCE_SELECTED_INDEX = 2
 AGENTIC_SELECTED_INDEX = 3
-PILOT_EVIDENCE = (2, 2, 1, 3, 1)
 INFERENCE_ACCENT = "#F29040"
 INFERENCE_ACCENT_LIGHT = COST
+
+PILOT_POSITIONS = (
+    (-1.23, 0.34),
+    (0.00, 0.34),
+    (1.23, 0.34),
+    (-0.62, -0.34),
+    (0.62, -0.34),
+)
+
+OBSERVATIONS = (
+    ("A", "POSITIVE", SEL_ACCENT),
+    ("B", "PLATEAU", INK_SOFT),
+    ("C", "UNSTABLE", COST),
+    ("D", "BEST GAIN", GOOD_STROKE),
+    ("E", "NO GAIN", INK_FAINT),
+)
+
+# Duration, in seconds, for each sandbox progress bar to fill.
+SANDBOX_PILOT_PROGRESS_RUN_TIME = 1.60
+SANDBOX_PILOT_COMPLETION_TIME = 0.20
+SANDBOX_PILOT_LAG_RATIO = 0.16
+INFERENCE_REASONING_RUN_TIME = 1.35
 
 
 class ProxyProgressBar(VGroup):
@@ -86,42 +108,46 @@ class ProxyProgressBar(VGroup):
         return Transform(self.bar, target, **animation_kwargs)
 
 
-class ProxyExperiment(VGroup):
-    """One cheap proxy run contained inside the agentic preference model."""
+class SandboxExecutionCard(VGroup):
+    """A terminal-like pilot run with progress, completion, and one finding."""
 
-    def __init__(self, evidence=2, width=1.08, height=0.52, **kwargs):
+    def __init__(self, label, observation, observation_color, width=1.12,
+                 height=0.57, **kwargs):
         super().__init__(**kwargs)
-        self.evidence_count = evidence
+        self.observation_color = observation_color
         self.panel = RoundedRectangle(
             width=width,
             height=height,
-            corner_radius=0.08,
+            corner_radius=0.07,
             fill_color=SURFACE_BLUE,
             fill_opacity=1,
-            stroke_color=BLUE_DEEP,
-            stroke_width=2.0,
+            stroke_color=SEL_ACCENT,
+            stroke_width=1.8,
         )
-        label = txt("PILOT", size=14, color=SEL_ACCENT, weight=MEDIUM)
-        self.bar = ProxyProgressBar(width=0.48, height=0.085, color=SEL_ACCENT)
-        self.evidence = VGroup(
-            *[Dot(radius=0.045, color=RULE) for _ in range(3)]
-        ).arrange(RIGHT, buff=0.05)
-        result = VGroup(self.bar, self.evidence).arrange(RIGHT, buff=0.10)
-        body = VGroup(label, result).arrange(DOWN, buff=0.10)
-        body.move_to(self.panel.get_center())
-        self.add(self.panel, body)
+        prompt = txt(f"> {label}", size=10, color=SEL_ACCENT)
+        self.status = txt("RUNNING", size=7, color=INK_SOFT)
+        header = VGroup(prompt, self.status).arrange(RIGHT, buff=0.09)
+        header.move_to(self.panel.get_top() + DOWN * 0.12)
+
+        self.bar = ProxyProgressBar(width=0.78, height=0.075, color=SEL_ACCENT)
+        self.bar.move_to(self.panel.get_center() + UP * 0.005)
+
+        self.observation = txt(observation, size=9, color=observation_color)
+        self.observation.move_to(self.panel.get_bottom() + UP * 0.13)
+        self.observation.set_opacity(0)
+        self.add(self.panel, header, self.bar, self.observation)
 
     def run(self, run_time=0.55):
-        findings = AnimationGroup(
-            *[
-                dot.animate.set_color(
-                    SEL_ACCENT if i < self.evidence_count else INK_FAINT
-                )
-                for i, dot in enumerate(self.evidence)
-            ],
-            run_time=0.20,
+        done = txt("DONE", size=7, color=GOOD_STROKE).move_to(self.status)
+        finding = self.observation.copy().set_opacity(1)
+        return Succession(
+            self.bar.fill_to(1.0, run_time=run_time),
+            AnimationGroup(
+                Transform(self.status, done),
+                Transform(self.observation, finding),
+                run_time=0.20,
+            ),
         )
-        return Succession(self.bar.fill_to(1.0, run_time=run_time), findings)
 
 
 class PreferenceModel(VGroup):
@@ -203,32 +229,29 @@ def make_evaluation_dimensions():
     return dimensions
 
 
-def make_proxy_experiments():
-    pilots = VGroup()
-    positions = (
-        (-1.20, 0.31),
-        (0.00, 0.31),
-        (1.20, 0.31),
-        (-0.60, -0.31),
-        (0.60, -0.31),
+def make_sandbox_cards():
+    experiments = VGroup()
+    for (label, finding, color), (x, y) in zip(OBSERVATIONS, PILOT_POSITIONS):
+        experiment = SandboxExecutionCard(label, finding, color)
+        experiment.move_to(np.array([x, y, 0.0]))
+        experiments.add(experiment)
+    return experiments
+
+
+def make_inference_preference_model(center_x):
+    model = PreferenceModel(
+        "LLM selects using code + context",
+        make_evaluation_dimensions(),
     )
-    for evidence, (x, y) in zip(PILOT_EVIDENCE, positions):
-        pilot = ProxyExperiment(evidence=evidence)
-        pilot.move_to(np.array([x, y, 0.0]))
-        pilots.add(pilot)
-    return pilots
+    return model.move_to(np.array([center_x, LAYOUT["model_y"], 0.0]))
 
 
-def make_preference_model(center_x, variant):
-    if variant == "inference":
-        internals = make_evaluation_dimensions()
-        subtitle = "LLM selects using code + context"
-    else:
-        internals = make_proxy_experiments()
-        subtitle = "LLM selects using additional pilot experiments"
-    model = PreferenceModel(subtitle, internals)
-    model.move_to(np.array([center_x, LAYOUT["model_y"], 0.0]))
-    return model
+def make_agentic_preference_model(center_x):
+    model = PreferenceModel(
+        "LLM selects using additional pilot experiments",
+        make_sandbox_cards(),
+    )
+    return model.move_to(np.array([center_x, LAYOUT["model_y"], 0.0]))
 
 
 def make_selected_output(
@@ -345,16 +368,48 @@ def animate_inference_model(model, color=INFERENCE_ACCENT):
     )
 
 
-def animate_agentic_model(model):
+def animate_sandbox_until_inference_finishes(model):
+    """Advance every pilot linearly while the inference-only model evaluates."""
     pilots = model.internals
+    pilot_duration = (
+        SANDBOX_PILOT_PROGRESS_RUN_TIME + SANDBOX_PILOT_COMPLETION_TIME
+    )
+    stagger_delay = pilot_duration * SANDBOX_PILOT_LAG_RATIO
+    partial_runs = []
+    for index, pilot in enumerate(pilots):
+        delay = index * stagger_delay
+        active_time = max(0.0, INFERENCE_REASONING_RUN_TIME - delay)
+        fraction = min(1.0, active_time / SANDBOX_PILOT_PROGRESS_RUN_TIME)
+        partial_runs.append(
+            Succession(
+                Wait(delay),
+                pilot.bar.fill_to(fraction, run_time=active_time),
+            )
+        )
     return Succession(
         model.pulse(run_time=0.50),
-        LaggedStart(
-            *[pilot.run(run_time=0.50) for pilot in pilots],
-            lag_ratio=0.16,
-            run_time=1.85,
+        AnimationGroup(
+            *partial_runs,
+            lag_ratio=0,
         ),
     )
+
+
+def finish_sandbox_pilots(model):
+    """Continue each partially filled bar without resetting its progress."""
+    pilot_duration = (
+        SANDBOX_PILOT_PROGRESS_RUN_TIME + SANDBOX_PILOT_COMPLETION_TIME
+    )
+    stagger_delay = pilot_duration * SANDBOX_PILOT_LAG_RATIO
+    completions = []
+    for index, pilot in enumerate(model.internals):
+        elapsed = max(
+            0.0,
+            INFERENCE_REASONING_RUN_TIME - index * stagger_delay,
+        )
+        remaining = max(0.0, SANDBOX_PILOT_PROGRESS_RUN_TIME - elapsed)
+        completions.append(pilot.run(run_time=remaining))
+    return AnimationGroup(*completions, lag_ratio=0)
 
 
 def dim_connector(connector, opacity=0.48):
@@ -403,12 +458,52 @@ def reveal_selection(
     )
 
 
-class Video2HowRPM(RPMScene):
-    """Static split-screen comparison with two downward decision pipelines."""
+def reveal_completed_side(
+    model,
+    output_arrow,
+    candidates,
+    input_arrows,
+    selected_card,
+    badge,
+    selected_index,
+    accent_color=SEL_ACCENT,
+    fill_color=SEL_FILL,
+    stroke_color=SEL_STROKE,
+):
+    selection = reveal_selection(
+        candidates,
+        input_arrows,
+        selected_card,
+        badge,
+        selected_index,
+        fill_color=fill_color,
+        stroke_color=stroke_color,
+    )
+    selection.set_run_time(0.80)
+    return Succession(
+        AnimationGroup(
+            Indicate(
+                output_arrow,
+                color=accent_color,
+                scale_factor=1.0,
+            ),
+            Flash(
+                model.get_bottom(),
+                color=accent_color,
+                flash_radius=0.42,
+            ),
+            run_time=0.70,
+        ),
+        selection,
+    )
 
-    def make_agentic_preference_model(self, center_x):
-        """Override point for alternate pilot-experiment visualizations."""
-        return make_preference_model(center_x, "agentic")
+
+class Video2HowRPM(RPMScene):
+    """Static split-screen comparison with two downward decision pipelines.
+
+    The comparison stays fixed while the agentic pilots are allowed to run
+    longer than the inference-only model's reasoning pass.
+    """
 
     def construct(self):
         left_center, right_center = LAYOUT["half_centers"]
@@ -441,8 +536,8 @@ class Video2HowRPM(RPMScene):
             "CANDIDATE SOLUTIONS", size=15, color=INK_SOFT, weight=MEDIUM
         ).next_to(right_candidates, UP, buff=SECTION_LABEL_GAP)
 
-        left_model = make_preference_model(left_center, "inference")
-        right_model = self.make_agentic_preference_model(right_center)
+        left_model = make_inference_preference_model(left_center)
+        right_model = make_agentic_preference_model(right_center)
         left_selected, left_badge, left_selected_label = make_selected_output(
             left_center,
             CANDIDATE_LABELS_V2[INFERENCE_SELECTED_INDEX],
@@ -450,7 +545,8 @@ class Video2HowRPM(RPMScene):
             selection_stroke=INFERENCE_ACCENT_LIGHT,
         )
         right_selected, right_badge, right_selected_label = make_selected_output(
-            right_center, CANDIDATE_LABELS_V2[AGENTIC_SELECTED_INDEX]
+            right_center,
+            CANDIDATE_LABELS_V2[AGENTIC_SELECTED_INDEX],
         )
 
         left_inputs = downward_input_arrows(left_candidates, left_model)
@@ -508,42 +604,38 @@ class Video2HowRPM(RPMScene):
 
         self.play(
             animate_inference_model(left_model),
-            animate_agentic_model(right_model),
-            run_time=2.35,
+            animate_sandbox_until_inference_finishes(right_model),
         )
 
         self.play(
-            Indicate(left_output, color=INFERENCE_ACCENT, scale_factor=1.0),
-            Indicate(right_output, color=SEL_ACCENT, scale_factor=1.0),
-            Flash(
-                left_model.get_bottom(),
-                color=INFERENCE_ACCENT,
-                flash_radius=0.42,
-            ),
-            Flash(right_model.get_bottom(), color=SEL_ACCENT, flash_radius=0.42),
-            run_time=0.70,
-        )
-        self.play(
-            reveal_selection(
+            reveal_completed_side(
+                left_model,
+                left_output,
                 left_candidates,
                 left_inputs,
                 left_selected,
                 left_badge,
                 INFERENCE_SELECTED_INDEX,
+                accent_color=INFERENCE_ACCENT,
                 fill_color=INFERENCE_ACCENT,
                 stroke_color=INFERENCE_ACCENT_LIGHT,
             ),
-            reveal_selection(
+            finish_sandbox_pilots(right_model),
+        )
+
+        self.play(
+            reveal_completed_side(
+                right_model,
+                right_output,
                 right_candidates,
                 right_inputs,
                 right_selected,
                 right_badge,
                 AGENTIC_SELECTED_INDEX,
             ),
-            run_time=0.80,
         )
-        self.wait(3.5)
 
+        self.wait(3.5)
         current_state = list(self.mobjects)
         self.play(
             AnimationGroup(

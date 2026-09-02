@@ -36,38 +36,25 @@ Useful flags: `-p` opens the result, `-s` renders only the last frame as a PNG,
 `--disable_caching` forces a full re-render (needed after editing `components/`,
 since Manim only hashes the scene file).
 
-Or via the shortcut runner:
-
-```bash
-python main.py preview        # both, 480p15
-python main.py final          # both, 1080p60
-python main.py final 1        # just Video 1
-python main.py preview 1a     # just Video 1, Act 1
-python main.py preview 1b     # just Video 1, Act 2
-python main.py preview 1c     # just Video 1, Act 3
-python main.py still 2        # last frame of Video 2 as a PNG
-```
-
 Output lands in `media/videos/<file>/<resolution>/<Scene>.mp4`.
 
 ## Structure
 
 ```
-main.py                  render shortcut
 scenes/
   video1.py              combined Video 1 orchestrator
   video1_common.py       shared Video 1 components and pacing
   video1_act1.py         compute-allocation problem
   video1_act2.py         RPM solution
   video1_act3.py         research-agent integration
-  video2.py              "How does the RPM decide?"   — 5 beats
+  video2.py              "How does the RPM decide?" — split-screen comparison
 components/
   theme.py               palette, type, timing  ← change the look here
   base.py                RPMScene / RPMMovingScene (black ground)
   node.py                SolutionNode + the four Figure 1 states
   tree.py                SearchTree, edges, Figure 1 layout, retarget_tree
-  figure1.py             the shared "Select Child Using RPM" composition
   candidate.py           CandidateCard (plan + code), candidate rails
+  candidate_diagrams.py  small architecture icons drawn on candidate cards
   rpm.py                 RPMBox, funnel/fan/curved arrows, tournament ladder
   gpu.py                 GPUBox (expensive), SandboxBox (cheap pilot), Clock
   agent.py               AgentBox
@@ -78,6 +65,11 @@ project_background/      the paper, Figure 1, and Meta style references
 
 Both scenes are built from the same components, so the tree, the RPM box and the
 candidate rail are literally the same objects across the two videos.
+
+Video 2 is self-contained: `scenes/video2.py` holds the layout constants, the
+`PreferenceModel` container, the `SandboxExecutionCard` pilot runs, and the
+timing that lets the agentic pilots keep running after the inference-only side
+has already committed to its pick.
 
 ## Visual language
 
@@ -109,8 +101,10 @@ child is executed or added back to the tree.
 
 **Video 2.** A fixed split-screen comparison contrasts an inference-only RPM,
 which reasons from existing evidence, with an agentic RPM, which first gathers
-evidence from small pilot experiments. It explains the decision mechanisms that
-Video 1 intentionally leaves inside the black box.
+evidence from small pilot experiments. The agentic pilots deliberately outlast
+the inference-only reasoning pass, so the left side resolves first and the extra
+cost of gathering fresh evidence is visible. It explains the decision mechanisms
+that Video 1 intentionally leaves inside the black box.
 
 Figure 1 selects candidate **A**. Video 1 uses **C**; Video 2 uses **C** for the
 inference-only side and **D** for the agentic side.
@@ -158,3 +152,10 @@ it Pango silently falls back and the type goes off-brand.
   use `mamba`.
 
 `project_background/` is reference material — leave it as is.
+
+## History
+
+The full exploratory history — the `graphs/` figure recreations, the alternate
+Video 2 variants (`video2_sandbox_cards.py`, `video2_sandbox_cards_slow.py`,
+`video2_training_curves.py`), the `main.py` render shortcut, and scratch scenes
+— lives on the `dev` branch.
