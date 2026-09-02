@@ -6,6 +6,19 @@ animation, written by Grant Sanderson ([**3Blue1Brown**](https://www.youtube.com
 This repo is a worked example including two short clips explaining **AI Research
 Preference Models**.
 
+<table>
+<tr>
+<td width="50%" align="center">
+<video src="assets/Video1WhyRPM.mp4" controls muted loop width="100%"></video>
+<br><sub><b>Video 1</b> — Why do we need an RPM?<br><a href="assets/Video1WhyRPM.mp4">assets/Video1WhyRPM.mp4</a></sub>
+</td>
+<td width="50%" align="center">
+<video src="assets/Video2RPMVariants.mp4" controls muted loop width="100%"></video>
+<br><sub><b>Video 2</b> — How does the RPM decide?<br><a href="assets/Video2RPMVariants.mp4">assets/Video2RPMVariants.mp4</a></sub>
+</td>
+</tr>
+</table>
+
 ## 1. Let a coding agent write the first draft
 
 Point **Claude Code**, **Codex**, or **Muse Code** at an empty repo and describe
