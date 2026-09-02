@@ -10,11 +10,11 @@ Preference Models**.
 <tr>
 <td width="50%" align="center">
 <video src="assets/Video1WhyRPM.mp4" controls muted loop width="100%"></video>
-<br><sub><b>Video 1</b> — Why do we need an RPM?<br><a href="assets/Video1WhyRPM.mp4">assets/Video1WhyRPM.mp4</a></sub>
+<br><sub><b>Video 1</b> — Why do we need an RPM?</sub>
 </td>
 <td width="50%" align="center">
 <video src="assets/Video2RPMVariants.mp4" controls muted loop width="100%"></video>
-<br><sub><b>Video 2</b> — How does the RPM decide?<br><a href="assets/Video2RPMVariants.mp4">assets/Video2RPMVariants.mp4</a></sub>
+<br><sub><b>Video 2</b> — RPM Variants</sub>
 </td>
 </tr>
 </table>
